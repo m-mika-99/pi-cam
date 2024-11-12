@@ -2,9 +2,13 @@ import sys
 import time
 import datetime
 import dataclasses
+import logging
 
 import cv2
 
+from logger import set_logger
+
+logger = logging.getLogger(__name__)
 
 @dataclasses.dataclass(frozen=True)
 class Config:
@@ -36,9 +40,9 @@ def main():
     cap = cv2.VideoCapture(config.camera_id)
     if not cap.isOpened():
         # カメラ取得できず、、、
-        # TODOエラーログ/Exception
-        print("カメラからデータ取れずエラー")
+        logger.error("カメラモジュールへのアクセスに失敗しました。モジュール番号：%s".format(config.camera_id))
         sys.exit(1)
+    logger.info(f"カメラアクセス完了。モジュール番号：{config.camera_id}")
     # カメラのフレームレート
     fps = int(cap.get(cv2.CAP_PROP_FPS))
     # 捕捉終了後の撮影フレーム数
@@ -58,6 +62,7 @@ def main():
     #################################
     # メインループ
     #################################
+    logger.info("映像読み込み開始")
     while True:
         # 画像読み込み
         ret, frame = cap.read()
@@ -120,9 +125,9 @@ def main():
         # 撮影開始・終了処理
         #################################
         if is_recording and not is_recording_before:
-            print("撮影開始") # TODO デバッグ用
             # 開始時刻
             rec_start_time = datetime.datetime.now()
+            logger.info(f"撮影開始。ファイル：{rec_start_time.strftime('%Y%m%d-%H%M%S')}.tmp")
             # レコーダ作成 TODO ファイル名
             recoder = cv2.VideoWriter(
                 f"{config.rec_out_dir}/{rec_start_time.strftime('%Y%m%d-%H%M%S')}.tmp",
@@ -131,7 +136,7 @@ def main():
                 (640, 480)
             )
         elif not is_recording and is_recording_before:
-            print("撮影終了") # TODO デバッグ用
+            logger.info(f"撮影終了。")
             # レコーダ開放
             recoder.release()
         elif is_recording and is_recording_before:
@@ -170,6 +175,7 @@ def main():
         #################################
         # キー入力「q」で終了
         if cv2.waitKey(delay) & 0xFF == ord('q'):
+            logger.warning(f"終了キーが入力されました。")
             break
 
     #################################
@@ -177,11 +183,18 @@ def main():
     #################################
     # カメラ
     cap.release()
+    logger.info("カメラアクセス終了")
     # 表示ウィンドウ
     cv2.destroyAllWindows()
+    logger.info("表示ウィンドウ終了")
     # レコーダ
     if recoder:
         recoder.release()
+    logger.info("レコーダ解放")
+
+
+    logger.info("終了します")
 
 if __name__ == '__main__':
+    set_logger()
     main()

@@ -1,31 +1,39 @@
 import sys
 import time
 import datetime
+import dataclasses
 
 import cv2
 
 
-def main():
-    ######################
-    # TODO 👇👇configから読み込みたい
-    ######################
-    # カメラID
-    camera_id = 0
-    # 表示ウィンドウ名
-    window_name = 'frame'
-    # 捕捉しなくなってから何秒間録画するか？
-    after_cap_time_sec = 3
-    # 保存ファイルコーデック
-    # TODO 選択したい
-    codec = cv2.VideoWriter.fourcc(*"mp4v")
-    # 保存先ディレクトリ
-    # TODO 文字じゃなくPathで持ちたい
-    rec_dir_name = "./output"
+@dataclasses.dataclass(frozen=True)
+class Config:
+    """設定情報保持
+    """
+    camera_id: int
+    window_name: str
+    after_cap_time_sec: int
+    codec: int
+    rec_out_dir: str # TODO Pathにしたい
 
-    # TODO 👆configここまで👆
+def get_config() -> Config:
+    """設定読み込み
+    """
+    # TODO とりあえずべた
+    return Config(
+        camera_id=0,
+        window_name='frames',
+        after_cap_time_sec=3,
+        codec=cv2.VideoWriter.fourcc(*"mp4v"),
+        rec_out_dir="./output"
+    )
+
+
+def main():
+    config: Config = get_config()
 
     # カメラ読み込み
-    cap = cv2.VideoCapture(camera_id)
+    cap = cv2.VideoCapture(config.camera_id)
     if not cap.isOpened():
         # カメラ取得できず、、、
         # TODOエラーログ/Exception
@@ -34,7 +42,7 @@ def main():
     # カメラのフレームレート
     fps = int(cap.get(cv2.CAP_PROP_FPS))
     # 捕捉終了後の撮影フレーム数
-    after_cap_frames = after_cap_time_sec * fps
+    after_cap_frames = config.after_cap_time_sec * fps
 
     # キー入力まち用
     delay = 1
@@ -84,7 +92,7 @@ def main():
             if w < 50:
                 continue
             obj_cnt += 1
-            # cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
 
         #################################
         # 撮影開始・継続・終了判定
@@ -117,8 +125,8 @@ def main():
             rec_start_time = datetime.datetime.now()
             # レコーダ作成 TODO ファイル名
             recoder = cv2.VideoWriter(
-                f"{rec_dir_name}/{rec_start_time.strftime('%Y%m%d-%H%M%S')}.mp4",
-                codec,
+                f"{config.rec_out_dir}/{rec_start_time.strftime('%Y%m%d-%H%M%S')}.tmp",
+                config.codec,
                 20.0,
                 (640, 480)
             )
@@ -155,7 +163,7 @@ def main():
         # ウィンドウでの再生速度を元動画と合わせる
         time.sleep(1 / fps)
         # ウィンドウで表示
-        cv2.imshow(window_name, frame)
+        cv2.imshow(config.window_name, frame)
 
         #################################
         # 終了
